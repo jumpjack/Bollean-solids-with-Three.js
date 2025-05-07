@@ -21,6 +21,8 @@ window.onload = function() {
 
 	scene = new THREE.Scene();
 
+	scene.background = new THREE.Color(0x87CEEB); 
+	
 	light = new THREE.DirectionalLight( 0xffffff );
 	light.position.set( 1, 1, 1 ).normalize();
 	scene.add( light );
@@ -44,6 +46,19 @@ window.onload = function() {
 	controls.maxDistance = 50;
 	controls.maxPolarAngle = Math.PI / 2;
 
+	// Aggiungi ground (piano)
+	const groundGeometry = new THREE.PlaneGeometry(30, 30);
+	const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x999999 });
+	const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+	ground.rotation.x = -Math.PI / 2; // Ruota per renderlo orizzontale
+	ground.position.y = -3; // Posiziona sotto gli oggetti
+	ground.receiveShadow = true;
+	scene.add(ground);
+
+	// Aggiungi assi
+	const axesHelper = new THREE.AxesHelper(10);
+	scene.add(axesHelper);
+	
 	// Example #1 - Cube (mesh) subtract Sphere (mesh)
 	(function() {
 		var start_time = (new Date()).getTime();
