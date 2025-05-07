@@ -1,2 +1,2 @@
-- [Original example](https://jumpjack.github.io/Bollean-solids-with-Three.js/examples.html)
-- [My example](https://jumpjack.github.io/Bollean-solids-with-Three.js/localAndOrbit.html): works locally, added OrbitControls
+- [Original example](https://jumpjack.github.io/Boolean-solids-with-Three.js/examples.html)
+- [My example](https://jumpjack.github.io/Boolean-solids-with-Three.js/localAndOrbit.html): works locally, added OrbitControls
