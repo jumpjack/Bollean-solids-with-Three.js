@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+<!--
+<script src="https://cdn.jsdelivr.net/npm/three@0.122.0/examples/js/controls/OrbitControls.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.js"></script>
+-->
+<script type="text/javascript" src="three128.js"></script>
+<script src="OrbitControls122.js"></script>
+<script type="text/javascript" src="csg-lib.js"></script>  <!-- Modded from https://github.com/manthrax/THREE-CSGMesh -->
+<script type="text/javascript" src="three-csg-mod.js"></script>  <!-- Modded from https://github.com/manthrax/THREE-CSGMesh -->
+<style type="text/css">
+    html, body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+    #shadowToggle {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 100;
+        padding: 8px 15px;
+        background: rgba(255,255,255,0.8);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: Arial, sans-serif;
+    }
+    #shadowToggle:hover {
+        background: rgba(255,255,255,0.9);
+    }
+</style>
+</head>
+<body>
+    <div id="viewport"></div>
+    <button id="shadowToggle">Shadows</button>
+
+<script type="text/javascript">
+var renderer, scene, camera, light, controls;
+var shadowsEnabled = true;
+
+
+function createLegend() {
+    const legend = document.createElement('div');
+    legend.style.position = 'absolute';
+    legend.style.bottom = '20px';
+    legend.style.right = '20px';
+    legend.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+    legend.style.padding = '10px';
+    legend.style.borderRadius = '5px';
+    legend.style.fontFamily = 'Arial, sans-serif';
+
+    legend.innerHTML = `
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <div style="width: 20px; height: 20px; background-color: red; margin-right: 10px;"></div>
+            <span>Subtract</span>
+        </div>
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <div style="width: 20px; height: 20px; background-color: green; margin-right: 10px;"></div>
+            <span>Intersect</span>
+        </div>
+        <div style="display: flex; align-items: center;">
+            <div style="width: 20px; height: 20px; background-color: blue; margin-right: 10px;"></div>
+            <span>Union</span>
+        </div>
+    `;
+
+    document.body.appendChild(legend);
+}
+
+
+
+function toggleShadows() {
+    shadowsEnabled = !shadowsEnabled;
+
+    // Aggiorna il renderer
+    renderer.shadowMap.enabled = shadowsEnabled;
+
+    // Aggiorna la luce
+    light.castShadow = shadowsEnabled;
+
+    // Aggiorna tutti gli oggetti nella scena
+    scene.traverse(function(object) {
+        if (object.isMesh) {
+            object.castShadow = shadowsEnabled;
+            object.receiveShadow = shadowsEnabled;
+        }
+    });
+
+    // Aggiorna il testo del pulsante
+    document.getElementById('shadowToggle').textContent =
+        shadowsEnabled ? "Disattiva Ombre" : "Attiva Ombre";
+}
+
+window.onload = function() {
+    // Aggiungi gestore evento per il pulsante
+    document.getElementById('shadowToggle').addEventListener('click', toggleShadows);
+
+    renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    // Abilita le ombre nel renderer
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Per ombre più morbide
+    document.getElementById('viewport').appendChild(renderer.domElement);
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87CEEB);
+
+    // Crea una sfera che rappresenta il sole
+    const sunGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+    const sunMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffff00,
+        emissive: 0xffff00,
+        emissiveIntensity: 1
+    });
+    const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+
+    // Posiziona il sole in alto a destra
+    sun.position.set(10, 15, 5);
+    scene.add(sun);
+
+    // Crea la luce direzionale che rappresenta la luce del sole
+    light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.copy(sun.position);
+    light.target.position.set(0, 0, 0); // Punta verso il centro della scena
+
+    // Configurazione delle ombre
+    light.castShadow = true;
+    light.shadow.mapSize.width = 1024;
+    light.shadow.mapSize.height = 1024;
+    light.shadow.camera.near = 0.1;
+    light.shadow.camera.far = 50;
+    light.shadow.camera.left = -10;
+    light.shadow.camera.right = 10;
+    light.shadow.camera.top = 10;
+    light.shadow.camera.bottom = -10;
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+    // Aggiungi helper per visualizzare la direzione della luce (opzionale)
+    const lightHelper = new THREE.DirectionalLightHelper(light, 1);
+    scene.add(lightHelper);
+
+    scene.add(light);
+    scene.add(light.target);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    camera.position.set( 5, 5, 15 );
+    camera.lookAt( scene.position );
+    scene.add( camera );
+
+    // Add OrbitControls
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.25;
+    controls.screenSpacePanning = false;
+    controls.minDistance = 5;
+    controls.maxDistance = 50;
+    controls.maxPolarAngle = Math.PI / 2;
+
+    // Modifica i materiali per funzionare meglio con le ombre
+    let mkMat=(color) => new THREE.MeshStandardMaterial({
+        color:color,
+        roughness: 0.7,
+        metalness: 0.1,
+        side: THREE.DoubleSide
+    });
+
+    let rnd=(rng)=>((Math.random()*2)-1)*(rng||1)
+
+    let box = new THREE.Mesh(new THREE.BoxGeometry(2,2,2),mkMat('grey'))
+    box.castShadow = true;
+    box.receiveShadow = true;
+    scene.add(box)
+
+    let sphere = new THREE.Mesh(new THREE.SphereGeometry(1.2,16,16),mkMat('grey'))
+    sphere.castShadow = true;
+    sphere.receiveShadow = true;
+    scene.add(sphere)
+
+    // Configura il terreno per ricevere ombre
+    const groundGeometry = new THREE.PlaneGeometry(30, 30);
+    const groundMaterial = new THREE.MeshStandardMaterial({
+        color: 0x999999,
+        roughness: 0.8,
+        metalness: 0.1
+    });
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -3;
+    ground.receiveShadow = true; // Importante!
+    scene.add(ground);
+
+    function doCSG(a,b,op,mat){
+        let bspA = CSG.fromMesh( a );
+        let bspB = CSG.fromMesh( b );
+        let bspC = bspA[op]( bspB );
+        let result = CSG.toMesh( bspC, a.matrix );
+        result.material = mat;
+        result.castShadow  = result.receiveShadow = true;
+        return result;
+    }
+
+    let subMaterial = mkMat('red')
+    let intersectMaterial = mkMat('green')
+    let unionMaterial = mkMat('blue');
+    let results = []
+
+    function recompute(){
+        for(let i=0;i<results.length;i++){
+            let m = results[i]
+            m.parent.remove(m)
+            m.geometry.dispose();
+        }
+        results = [];
+
+        box.updateMatrix();
+        sphere.updateMatrix();
+
+        results.push(doCSG(box,sphere,'subtract',subMaterial))
+        results.push(doCSG(box,sphere,'intersect',intersectMaterial))
+        results.push(doCSG(box,sphere,'union',unionMaterial))
+
+        for(let i=0;i<results.length;i++){
+            let r = results[i];
+            r.castShadow = r.receiveShadow = shadowsEnabled;
+            scene.add(r)
+
+            r.position.z += -5 + ((i%3)*5)
+            r.position.x += -5 + (((i/3)|0)*10)
+        }
+    }
+
+
+
+
+createLegend();
+
+    // Aggiungi assi
+    const axesHelper = new THREE.AxesHelper(10);
+    scene.add(axesHelper);
+
+    // Handle window resize
+    window.addEventListener('resize', onWindowResize, false);
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    (function render() {
+        requestAnimationFrame( render );
+
+        let time = performance.now()
+        sphere.position.x=Math.sin(time*0.001)*2;
+        //sphere.position.z=Math.cos(time*0.0011)*0.5;
+        //sphere.position.t=Math.sin(time*-0.0012)*0.5;
+        recompute();
+
+        //controls.update(); // Required for damping and auto-rotation
+        renderer.render(scene, camera);
+    })();
+}
+</script>
+</body>
+</html>
